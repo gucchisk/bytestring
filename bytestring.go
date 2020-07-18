@@ -9,36 +9,57 @@ import (
 	"unsafe"
 )
 
+// Bytes is byte array wrapper.
 type Bytes struct {
 	data []byte
 }
 
+// NewBytes returns new Bytes including given byte array.
 func NewBytes(bytes []byte) Bytes {
 	return Bytes{
 		bytes,
 	}
 }
 
+// NewBytesFrom returns new Bytes including byte array encoded from str.
+func NewBytesFrom(str string, typ Strings) (Bytes, error) {
+	d, err := typ.toBytes(str)
+	return Bytes{
+		d,
+	}, err
+}
+
+// ByteArray returns byte array in Bytes.
+func (b Bytes) ByteArray() []byte {
+	return b.data
+}
+
+// String returns ascii string.
 func (b Bytes) String() string {
 	return *(*string)(unsafe.Pointer(&(b.data)))
 }
 
+// HexString returns the hexdecimall encoding.
 func (b Bytes) HexString() string {
 	return hex.EncodeToString(b.data)
 }
 
+// Base64 returns the base64 encoded string.
 func (b Bytes) Base64() string {
 	return b.Base64Custom(base64.StdEncoding)
 }
 
+// Base64URL returns the base64url encoded string.
 func (b Bytes) Base64URL() string {
 	return b.Base64Custom(base64.URLEncoding.WithPadding(base64.NoPadding))
 }
 
+// Base64Custom returns the string encoded by encoding.
 func (b Bytes) Base64Custom(encoding *base64.Encoding) string {
 	return encoding.EncodeToString(b.data)
 }
 
+// GoByteArray returns the byte array printed by golang.
 func (b Bytes) GoByteArray() string {
 	return fmt.Sprintf("%v", b.data)
 }
@@ -96,17 +117,3 @@ var Base64 = Base64String{base64.StdEncoding}
 var Base64URL = Base64String{base64.URLEncoding.WithPadding(base64.NoPadding)}
 var GoByteArray = GoByteArrayString{}
 
-type String struct {
-	data []byte
-}
-
-func NewBytesFrom(str string, typ Strings) (String, error) {
-	d, err := typ.toBytes(str)
-	return String{
-		d,
-	}, err
-}
-
-func (s String) ByteArray() []byte {
-	return s.data
-}
