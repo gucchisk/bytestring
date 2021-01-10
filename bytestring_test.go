@@ -16,6 +16,15 @@ func TestBytesToString(t *testing.T) {
 	}
 }
 
+func TestStringToString(t *testing.T) {
+	expectStr := "hello"
+	bytes := NewBytesFromString(expectStr)
+	str := bytes.String()
+	if str != expectStr {
+		t.Errorf("string not equal (result: %s, expect: %s)", str, expectStr)
+	}
+}
+
 func TestBytesToHexString(t *testing.T) {
 	b := []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f}
 	bytes := NewBytes(b)
@@ -75,7 +84,7 @@ func TestBytesToGoByteArray(t *testing.T) {
 
 func TestStringToBytes(t *testing.T) {
 	s := "hello"
-	bytes, err := NewBytesFrom(s, Normal)
+	bytes, err := NewBytesFrom(NewBytesFromString(s), Ascii)
 	if err != nil {
 		t.Errorf("error is not nil: %s\n", err)
 	}
@@ -88,7 +97,7 @@ func TestStringToBytes(t *testing.T) {
 
 func TestHexStringToBytes(t *testing.T) {
 	s := "68656c6c6f"
-	bytes, err := NewBytesFrom(s, Hex)
+	bytes, err := NewBytesFrom(NewBytesFromString(s), Hex)
 	if err != nil {
 		t.Errorf("error is not nil: %s\n", err)
 	}
@@ -99,7 +108,7 @@ func TestHexStringToBytes(t *testing.T) {
 	}
 
 	s = "abcdefgh"
-	bytes, err = NewBytesFrom(s, Hex)
+	bytes, err = NewBytesFrom(NewBytesFromString(s), Hex)
 	if err == nil {
 		t.Error("error is nil")
 	}
@@ -109,7 +118,7 @@ func TestHexStringToBytes(t *testing.T) {
 	}
 
 	s = "0abcdef"
-	bytes, err = NewBytesFrom(s, Hex)
+	bytes, err = NewBytesFrom(NewBytesFromString(s), Hex)
 	if err == nil {
 		t.Error("error is nil")
 	}
@@ -121,7 +130,7 @@ func TestHexStringToBytes(t *testing.T) {
 
 func TestBase64StringToBytes(t *testing.T) {
 	s := "aGVsbG8="
-	bytes, err := NewBytesFrom(s, Base64)
+	bytes, err := NewBytesFrom(NewBytesFromString(s), Base64)
 	if err != nil {
 		t.Errorf("error is not nil: %s\n", err)
 	}
@@ -132,7 +141,7 @@ func TestBase64StringToBytes(t *testing.T) {
 	}
 
 	s = "+/8="
-	bytes, err = NewBytesFrom(s, Base64)
+	bytes, err = NewBytesFrom(NewBytesFromString(s), Base64)
 	if err != nil {
 		t.Errorf("error is not nil: %s\n", err)
 	}
@@ -145,7 +154,7 @@ func TestBase64StringToBytes(t *testing.T) {
 
 func TestBase64StringToBytesNoPadding(t *testing.T) {
 	s := "aGVsbG8"
-	bytes, err := NewBytesFrom(s, Base64String{base64.StdEncoding.WithPadding(base64.NoPadding)})
+	bytes, err := NewBytesFrom(NewBytesFromString(s), Base64String{base64.StdEncoding.WithPadding(base64.NoPadding)})
 	b := bytes.ByteArray()
 	if err != nil {
 		t.Error("error is nil")
@@ -158,7 +167,7 @@ func TestBase64StringToBytesNoPadding(t *testing.T) {
 
 func TestBase64StringToBytesWithError(t *testing.T) {
 	s := "abcdefg-"
-	_, err := NewBytesFrom(s, Base64)
+	_, err := NewBytesFrom(NewBytesFromString(s), Base64)
 	if err == nil {
 		t.Error("error is nil")
 	}
@@ -171,7 +180,7 @@ func TestBase64StringToBytesWithError(t *testing.T) {
 
 func TestGoByteArrayStringToBytes(t *testing.T) {
 	s := "[104 101 108 108 111]"
-	bytes, err := NewBytesFrom(s, GoByteArray)
+	bytes, err := NewBytesFrom(NewBytesFromString(s), GoByteArray)
 	if err != nil {
 		t.Errorf("error is not nil: %s\n", err)
 	}
@@ -184,7 +193,7 @@ func TestGoByteArrayStringToBytes(t *testing.T) {
 
 func TestGoByteArrayStringToBytesWithError(t *testing.T) {
 	s := "[104 101 108 108 111 256]"
-	bytes, err := NewBytesFrom(s, GoByteArray)
+	bytes, err := NewBytesFrom(NewBytesFromString(s), GoByteArray)
 	if err == nil {
 		t.Error("error is nil")
 	}
@@ -195,7 +204,7 @@ func TestGoByteArrayStringToBytesWithError(t *testing.T) {
 	}
 
 	s = "[104 101 108 108 -1]"
-	bytes, err = NewBytesFrom(s, GoByteArray)
+	bytes, err = NewBytesFrom(NewBytesFromString(s), GoByteArray)
 	if err == nil {
 		t.Error("error is nil")
 	}
@@ -206,7 +215,7 @@ func TestGoByteArrayStringToBytesWithError(t *testing.T) {
 	}
 
 	s = "hello"
-	bytes, err = NewBytesFrom(s, GoByteArray)
+	bytes, err = NewBytesFrom(NewBytesFromString(s), GoByteArray)
 	if err == nil {
 		t.Error("error is nil")
 	}

@@ -21,9 +21,16 @@ func NewBytes(bytes []byte) Bytes {
 	}
 }
 
-// NewBytesFrom returns new Bytes including byte array encoded from str.
-func NewBytesFrom(str string, typ Strings) (Bytes, error) {
-	d, err := typ.toBytes(str)
+// NewBytesFromstring returns new Bytes including given string.
+func NewBytesFromString(str string) Bytes {
+	return Bytes{
+		*(*[]byte)(unsafe.Pointer(&str)),
+	}
+}
+
+// NewBytesFrom returns new Bytes including byte array encoded from Bytes.
+func NewBytesFrom(bytes Bytes, typ Strings) (Bytes, error) {
+	d, err := typ.toBytes(bytes.ByteArray())
 	return Bytes{
 		d,
 	}, err
@@ -65,35 +72,49 @@ func (b Bytes) GoByteArray() string {
 }
 
 type Strings interface {
-	toBytes(str string) ([]byte, error)
+	toBytes(bytes []byte) ([]byte, error)
 }
 
-type NormalString struct {
+type AsciiString struct {
 }
 
-func (n NormalString) toBytes(str string) ([]byte, error) {
-	return *(*[]byte)(unsafe.Pointer(&str)), nil
+func (a AsciiString) toBytes(bytes []byte) ([]byte, error) {
+	return bytes, nil
 }
 
 type HexString struct {
 }
 
-func (h HexString) toBytes(str string) ([]byte, error) {
-	return hex.DecodeString(str)
+func (h HexString) toBytes(bytes []byte) ([]byte, error) {
+	c := len(bytes)
+	dst := make([]byte, c / 2)
+	_, err := hex.Decode(dst, bytes)
+	return dst, err
 }
 
 type Base64String struct {
 	encoding *base64.Encoding
 }
 
-func (b Base64String) toBytes(str string) ([]byte, error) {
-	return b.encoding.DecodeString(str)
+func (b Base64String) toBytes(bytes []byte) ([]byte, error) {
+	len := len(bytes)
+	for {
+		if bytes[len - 1] != '=' {
+			break
+		}
+		len = len - 1
+	}
+	dstLen := len * 6 / 8
+	dst := make([]byte, dstLen)
+	_, err := b.encoding.Decode(dst, bytes)
+	return dst, err
 }
 
 type GoByteArrayString struct {
 }
 
-func (g GoByteArrayString) toBytes(str string) ([]byte, error) {
+func (g GoByteArrayString) toBytes(src []byte) ([]byte, error) {
+	str := *(*string)(unsafe.Pointer(&(src)))
 	strn := strings.Replace(str, "[", "", 1)
 	strn = strings.Replace(strn, "]", "", 1)
 	strs := strings.Split(strn, " ")
@@ -111,7 +132,7 @@ func (g GoByteArrayString) toBytes(str string) ([]byte, error) {
 	return bytes, nil
 }
 
-var Normal = NormalString{}
+var Ascii = AsciiString{}
 var Hex = HexString{}
 var Base64 = Base64String{base64.StdEncoding}
 var Base64URL = Base64String{base64.URLEncoding.WithPadding(base64.NoPadding)}
