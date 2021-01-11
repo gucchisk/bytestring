@@ -9,31 +9,38 @@ import (
 	"unsafe"
 )
 
+type Option func([]byte) ([]byte, error)
+
+func Type(typ Strings) Option {
+	return func(bytes []byte) ([]byte, error) {
+		return typ.toBytes(bytes)
+	}
+}
+
 // Bytes is byte array wrapper.
 type Bytes struct {
 	data []byte
 }
 
-// NewBytes returns new Bytes including given byte array.
-func NewBytes(bytes []byte) Bytes {
-	return Bytes{
-		bytes,
+// NewBytes returns new Bytes including given byte array
+func NewBytes(bytes []byte, options ...Option) (Bytes, error) {
+	b := bytes
+	for _, option := range options {
+		bytes, err := option(b)
+		if err != nil {
+			return Bytes{ nil }, err
+		}
+		b = bytes
 	}
+	return Bytes{
+		b,
+	}, nil
 }
 
 // NewBytesFromstring returns new Bytes including given string.
-func NewBytesFromString(str string) Bytes {
-	return Bytes{
-		*(*[]byte)(unsafe.Pointer(&str)),
-	}
-}
-
-// NewBytesFrom returns new Bytes including byte array encoded from Bytes.
-func NewBytesFrom(bytes Bytes, typ Strings) (Bytes, error) {
-	d, err := typ.toBytes(bytes.ByteArray())
-	return Bytes{
-		d,
-	}, err
+func NewBytesFromString(str string, options ...Option) (Bytes, error) {
+	b := *(*[]byte)(unsafe.Pointer(&str))
+	return NewBytes(b, options...)
 }
 
 // ByteArray returns byte array in Bytes.
