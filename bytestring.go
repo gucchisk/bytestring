@@ -11,9 +11,9 @@ import (
 
 type Option func([]byte) ([]byte, error)
 
-func Type(typ Strings) Option {
+func SetEncoding(format Encoding) Option {
 	return func(bytes []byte) ([]byte, error) {
-		return typ.toBytes(bytes)
+		return format.read(bytes)
 	}
 }
 
@@ -50,77 +50,115 @@ func (b Bytes) ByteArray() []byte {
 
 // String returns ascii string.
 func (b Bytes) String() string {
-	return *(*string)(unsafe.Pointer(&(b.data)))
+	return Ascii.toString(b.data)
+}
+
+func (b Bytes) toString(enc Encoding) string {
+	return enc.toString(b.data)
 }
 
 // HexString returns the hexdecimall encoding.
 func (b Bytes) HexString() string {
-	return hex.EncodeToString(b.data)
+	return Hex.toString(b.data)
 }
 
 // Base64 returns the base64 encoded string.
 func (b Bytes) Base64() string {
-	return b.Base64Custom(base64.StdEncoding)
+	return Base64.toString(b.data)
 }
 
 // Base64URL returns the base64url encoded string.
 func (b Bytes) Base64URL() string {
-	return b.Base64Custom(base64.URLEncoding.WithPadding(base64.NoPadding))
+	return Base64URL.toString(b.data)
 }
 
 // Base64Custom returns the string encoded by encoding.
-func (b Bytes) Base64Custom(encoding *base64.Encoding) string {
-	return encoding.EncodeToString(b.data)
+func (b Bytes) Base64Custom(encoding Encoding) string {
+	return encoding.toString(b.data)
 }
 
 // GoByteArray returns the byte array printed by golang.
 func (b Bytes) GoByteArray() string {
-	return fmt.Sprintf("%v", b.data)
+	return GoByteArray.toString(b.data)
 }
 
-type Strings interface {
-	toBytes(bytes []byte) ([]byte, error)
+type Encoding interface {
+	read(src []byte) ([]byte, error)
+	write(src []byte) []byte
+	toString(src []byte) string
 }
 
-type AsciiString struct {
+type AsciiEncoding struct {
 }
 
-func (a AsciiString) toBytes(bytes []byte) ([]byte, error) {
-	return bytes, nil
+func (a AsciiEncoding) read(src []byte) ([]byte, error) {
+	return src, nil
 }
 
-type HexString struct {
+func (a AsciiEncoding) write(src []byte) []byte {
+	return src
 }
 
-func (h HexString) toBytes(bytes []byte) ([]byte, error) {
-	c := len(bytes)
+func (a AsciiEncoding) toString(src []byte) string {
+	b := a.write(src)
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+type HexEncoding struct {
+}
+
+func (h HexEncoding) read(src []byte) ([]byte, error) {
+	c := len(src)
 	dst := make([]byte, c / 2)
-	_, err := hex.Decode(dst, bytes)
+	_, err := hex.Decode(dst, src)
 	return dst, err
 }
 
-type Base64String struct {
+func (h HexEncoding) write(src []byte) []byte {
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	hex.Encode(dst, src)
+	return dst
+}
+
+func (h HexEncoding) toString(src []byte) string {
+	b := h.write(src)
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+type Base64Encoding struct {
 	encoding *base64.Encoding
 }
 
-func (b Base64String) toBytes(bytes []byte) ([]byte, error) {
-	len := len(bytes)
-	for {
-		if bytes[len - 1] != '=' {
-			break
-		}
-		len = len - 1
-	}
-	dstLen := len * 6 / 8
+func (b Base64Encoding) read(src []byte) ([]byte, error) {
+	// len := len(src)
+	// for {
+	// 	if src[len - 1] != '=' {
+	// 		break
+	// 	}
+	// 	len = len - 1
+	// }
+	// dstLen := len * 6 / 8
+	dst := make([]byte, b.encoding.DecodedLen(len(src)))
+	l, err := b.encoding.Decode(dst, src)
+	return dst[0:l], err
+}
+
+func (b Base64Encoding) write(src []byte) []byte {
+	dstLen := b.encoding.EncodedLen(len(src))
 	dst := make([]byte, dstLen)
-	_, err := b.encoding.Decode(dst, bytes)
-	return dst, err
+	b.encoding.Encode(dst, src)
+	return dst
 }
 
-type GoByteArrayString struct {
+func (b Base64Encoding) toString(src []byte) string {
+	bytes := b.write(src)
+	return *(*string)(unsafe.Pointer(&bytes))
 }
 
-func (g GoByteArrayString) toBytes(src []byte) ([]byte, error) {
+type GoByteArrayEncoding struct {
+}
+
+func (g GoByteArrayEncoding) read(src []byte) ([]byte, error) {
 	str := *(*string)(unsafe.Pointer(&(src)))
 	strn := strings.Replace(str, "[", "", 1)
 	strn = strings.Replace(strn, "]", "", 1)
@@ -139,9 +177,18 @@ func (g GoByteArrayString) toBytes(src []byte) ([]byte, error) {
 	return bytes, nil
 }
 
-var Ascii = AsciiString{}
-var Hex = HexString{}
-var Base64 = Base64String{base64.StdEncoding}
-var Base64URL = Base64String{base64.URLEncoding.WithPadding(base64.NoPadding)}
-var GoByteArray = GoByteArrayString{}
+func (g GoByteArrayEncoding) write(src []byte) []byte {
+	s := g.toString(src)
+	return *(*[]byte)(unsafe.Pointer(&s))
+}
+
+func (g GoByteArrayEncoding) toString(src []byte) string {
+	return fmt.Sprintf("%v", src)
+}
+
+var Ascii = AsciiEncoding{}
+var Hex = HexEncoding{}
+var Base64 = Base64Encoding{base64.StdEncoding}
+var Base64URL = Base64Encoding{base64.URLEncoding.WithPadding(base64.NoPadding)}
+var GoByteArray = GoByteArrayEncoding{}
 
